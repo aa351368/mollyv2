@@ -45,15 +45,15 @@ void runCommand(const std::string& command)
     w = p.we_wordv;
     // execvp replaces the child process with the command
     if (execvp(w[0], w) == -1) {
-        syslog(LOG_ERR, "Failed to exec command '%s': %s", w[0], strerror(errno));
+        syslog(LOG_ERR, "Failed to exec command '%s': %s. Child process exiting.", w[0], strerror(errno));
     }
 
     wordfree(&p);
-    exit(0);
+    _exit(EXIT_FAILURE); // Use _exit in child, and exit with failure as execvp only returns on error.
   }
 }
 
-bool shutdown = false;
+volatile sig_atomic_t shutdown = 0;
 
 void print_usage(const char* prog_name) {
     std::cerr << "Usage: " << prog_name << " [options]\n"
@@ -67,6 +67,7 @@ int main(int argc, char* argv[])
 {
   Config config;
   std::string config_file_path;
+  std::string device_path_override;
 
   // --- Argument Parsing ---
   const struct option long_options[] = {
@@ -86,7 +87,7 @@ int main(int argc, char* argv[])
               config_file_path = optarg;
               break;
           case 'd':
-              config.device_path = optarg;
+              device_path_override = optarg;
               break;
           default:
               print_usage(argv[0]);
@@ -103,7 +104,7 @@ int main(int argc, char* argv[])
   auto signal_handler = [](int signo)
   {
       syslog(LOG_INFO, "Received %s -- shutting down", strsignal(signo));
-      shutdown = true;
+      shutdown = 1;
   };
 
   // Setup signal handlers for graceful shutdown
@@ -116,22 +117,28 @@ int main(int argc, char* argv[])
   signal(SIGHUP, SIG_IGN); // TODO: Could be used to reload configuration
 
   // --- Configuration Loading ---
-  // 1. Load from specified config file
+  // Priority: 1. Defaults -> 2. /etc/mollyd.conf -> 3. --config file -> 4. --device arg
+
+  // 1. Defaults are already in the Config struct.
+  // 2. Load from default system-wide config file.
+  parse_config_file("/etc/mollyd.conf", config);
+
+  // 3. Load from user-specified config file (overwriting previous values).
   if (!config_file_path.empty()) {
       if (!parse_config_file(config_file_path, config)) {
           syslog(LOG_ERR, "Could not open specified config file: %s", config_file_path.c_str());
-          // Continue with defaults/overrides
+          // Continue with previously loaded config.
       }
-  } else {
-      // 2. Or, try loading from default location
-      parse_config_file("/etc/mollyd.conf", config);
+  }
+
+  // 4. Apply command-line overrides, which have the highest priority.
+  if (!device_path_override.empty()) {
+    config.device_path = device_path_override;
   }
 
   // --- Logging Setup ---
   openlog("mollyd", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_USER);
   syslog(LOG_INFO, "Starting mollyd");
-
-  // Command-line arguments for device path have already overridden config file settings.
 
   DeviceState lastState = DeviceState::Unknown;
   Device device;
@@ -150,7 +157,7 @@ int main(int argc, char* argv[])
       {
         syslog(LOG_ERR, "Fatal: Error trying to open device: %s. Shutting down.", err.what());
         // Exit. Let systemd or other supervisor restart the daemon.
-        shutdown = true;
+        shutdown = 1;
         continue; // Go to the top of the loop to exit cleanly.
       }
     }
@@ -173,6 +180,9 @@ int main(int argc, char* argv[])
       {
         syslog(LOG_ERR, "Error closing device: %s", err.what());
       }
+
+      // Re-create the device object to ensure a clean state for the next open attempt.
+      device = Device();
 
       continue;
     }
