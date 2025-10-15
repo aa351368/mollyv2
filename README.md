@@ -47,7 +47,7 @@ Test your button is working via the `molly-test` command. It will log all state 
 
 ## Daemon
 
-The project includes `mollyd`, a daemon process that runs in the background. It can be configured via command-line arguments and a configuration file.
+The project includes `mollyd`, a daemon process that runs in the background. By default, it logs button events to syslog. It can be configured to run any command in response to events.
 
 ### Configuration
 
@@ -60,11 +60,11 @@ The daemon loads configuration with the following priority (from lowest to highe
 **Example `/etc/mollyd.conf`:**
 ```ini
 # Molly Daemon Configuration
-device = /dev/big_red_button
-on_press = /usr/bin/aplay /opt/sounds/staples-that-was-easy.wav
-on_open = /usr/local/bin/notify-send "Lid Opened"
-on_close =
-poll_interval_ms = 50
+device = /dev/big_red_button # Path to the device
+on_press = /usr/bin/aplay /opt/sounds/button-press.wav
+on_open = /usr/local/bin/notify-send "Lid Opened" # An empty command disables the action
+on_close = 
+poll_interval_ms = 50 # How often to check the device state
 ```
 
 ### Systemd Service

@@ -7,9 +7,9 @@ namespace molly
   struct Config
   {
     std::string device_path = "/dev/big_red_button";
-    std::string on_press_cmd = "espeak pressed";
-    std::string on_open_cmd = "espeak open";
-    std::string on_close_cmd = "espeak closed";
+    std::string on_press_cmd = "";
+    std::string on_open_cmd = "";
+    std::string on_close_cmd = "";
     int poll_interval_ms = 20;
     int error_poll_interval_ms = 1000;
   };
