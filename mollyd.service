@@ -1,0 +1,13 @@
+[Unit]
+Description=Molly Big Red Button Daemon
+Wants=dev-big_red_button.device
+After=dev-big_red_button.device
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/mollyd
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

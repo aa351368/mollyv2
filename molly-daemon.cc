@@ -94,47 +94,11 @@ int main(int argc, char* argv[])
       }
   }
 
-  // --- Daemonization and Logging Setup ---
   if (setlogmask(LOG_UPTO(LOG_INFO)) < 0)
   {
     cerr << "Error setting log mask" << endl;
     exit(1);
   }
-
-  openlog("mollyd", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_USER);
-  syslog(LOG_INFO, "Starting mollyd");
-
-  pid_t pid = fork();
-
-  if (pid < 0)
-  {
-    syslog(LOG_ERR, "Unable for fork child process");
-    cerr << "Unable for fork child process" << endl;
-    exit(1);
-  }
-
-  if (pid > 0)
-  {
-    // We successfully created the child process and received its PID.
-    // The child receives a PID of zero and falls through.
-    // As we're the parent, we should now exit.
-    stringstream msg;
-    msg << "mollyd started with PID " << pid;
-    syslog(LOG_ERR, "%s", msg.str().c_str());
-    cout << msg.str() << endl;
-    exit(EXIT_SUCCESS);
-  }
-
-  // Make this child process the session leader
-  if (setsid() < 0)
-  {
-    syslog(LOG_ERR, "Unable to set session ID for process");
-    exit(EXIT_FAILURE);
-  }
-
-  // Ignore SIGCHLD and SIGHUP signals
-  signal(SIGCHLD, SIG_IGN);
-  signal(SIGHUP, SIG_IGN); // TODO: Could be used to reload configuration
 
   auto signal_handler = [](int signo)
   {
@@ -146,25 +110,10 @@ int main(int argc, char* argv[])
   signal(SIGINT, signal_handler);
   signal(SIGTERM, signal_handler);
   // SIGKILL cannot be caught or handled.
-
-  // Change the file mask
-  umask(0);
-
-  // Set the process's working directory to something that is guaranteed to exist
-  if (chdir("/") < 0)
-  {
-    syslog(LOG_ERR, "Unable to set working directory.");
-    exit(1);
-  }
-
-  // Close standard in/out/err file descriptors for this process.
-  // Reopen them to /dev/null to avoid errors if code attempts to use them.
-  close(STDIN_FILENO);
-  close(STDOUT_FILENO);
-  close(STDERR_FILENO);
-  stdin = fopen("/dev/null", "r");
-  stdout = fopen("/dev/null", "w+");
-  stderr = fopen("/dev/null", "w+");
+  
+  // Ignore SIGCHLD and SIGHUP signals
+  signal(SIGCHLD, SIG_IGN);
+  signal(SIGHUP, SIG_IGN); // TODO: Could be used to reload configuration
 
   // --- Configuration Loading ---
   // 1. Load from specified config file
@@ -177,6 +126,10 @@ int main(int argc, char* argv[])
       // 2. Or, try loading from default location
       parse_config_file("/etc/mollyd.conf", config);
   }
+
+  // --- Logging Setup ---
+  openlog("mollyd", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_USER);
+  syslog(LOG_INFO, "Starting mollyd");
 
   // Command-line arguments for device path have already overridden config file settings.
 
