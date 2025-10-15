@@ -14,20 +14,24 @@ The project uses CMake.
     make
 
 ## Configure
+UDEV rule for the device (inspiration from https://github.com/drewnoakes/molly): 
 
-Set up a `udev` rule to mount the USB device under a known path and with read/write permissions for all users.
+~~~
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1d34", ATTRS{idProduct}=="000d", MODE="0664", GROUP="plugdev", SYMLINK+="big_red_button"
+~~~
 
-    $ sudo vim /etc/udev/rules.d/99-big-red-button.rules
+This udev rule identifies it better than the original code did
 
-Add the following text:
+Put into something like 
+/etc/udev/rules.d/50-big-red-button.rules
 
-    ACTION=="add", ENV{ID_MODEL}=="DL100B_Dream_Cheeky_Generic_Controller", SYMLINK+="big_red_button", MODE="0666"
+Reload the rules:
+~~~
+ sudo udevadm control --reload-rules
+~~~
+Verify it is working by unplug / replug and 
 
-This rule causes a device having `ID_MODEL` of `DL100B_Dream_Cheeky_Generic_Controller` to be mounted at `/dev/big_red_button` with permissions `666` (read/write for owner,group,other).
-
-Reload the udev rules:
-
-    $ sudo udevadm control --reload-rules
+ls -l /dev/big_red_button
 
 ## Test
 
