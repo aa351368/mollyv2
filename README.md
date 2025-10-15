@@ -60,16 +60,20 @@ The daemon loads configuration with the following priority (from lowest to highe
 **Example `/etc/mollyd.conf`:**
 ```ini
 # Molly Daemon Configuration
-device = /dev/big_red_button # Path to the device
-on_press = /usr/bin/aplay /opt/sounds/button-press.wav
-on_open = /usr/local/bin/notify-send "Lid Opened" # An empty command disables the action
+device = /dev/big_red_button
+
+# Example: Simulate pressing the 'Enter' key. Requires 'xdotool' to be installed.
+on_press = xdotool key Return
+
+# Do nothing when the lid is opened or closed.
+on_open = 
 on_close = 
 poll_interval_ms = 50 # How often to check the device state
 ```
 
 ### Systemd Service
 
-The most robust way to run the daemon is with the provided `systemd` service. This will ensure it starts on boot and is restarted automatically if it fails.
+The service will exit if the button is not detected, but is setup to restart always so it will work again pretty quickly once it's plugged back in.
 
 1.  **Install the daemon:**
     ```sh
@@ -81,11 +85,10 @@ The most robust way to run the daemon is with the provided `systemd` service. Th
     ```
 3.  **Enable and start the service:**
     ```sh
-    sudo systemctl enable mollyd.service
-    sudo systemctl start mollyd.service
+    sudo systemctl enable --now mollyd.service
     ```
 
-You can view the daemon's logs using `journalctl`:
+You can view the daemon's logs using `journalctl` to ensure it is behaving as expected:
 ```sh
 journalctl -u mollyd -f
 ```
