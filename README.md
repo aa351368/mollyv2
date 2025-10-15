@@ -1,6 +1,8 @@
 # molly
 
-Linux tools for the "Big Red Button" USB device manufactured by Dream Cheeky.
+I made these changes in an afternoon and relied heaivly on LLMs, it works for me but run at your own risk.
+
+Linux tools for the "Big Red Button" USB device manufactured by Dream Cheeky, with updates.
 
 ![Big Red Button](big-red-button.png)
 
@@ -20,16 +22,16 @@ UDEV rule for the device (inspiration from https://github.com/drewnoakes/molly):
 SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1d34", ATTRS{idProduct}=="000d", MODE="0664", GROUP="plugdev", SYMLINK+="big_red_button"
 ~~~
 
-This udev rule identifies it better than the original code did
+This udev rule identifies it, where as the original version did not for me. Watch dmesg to see if it matches for you
 
-Put into something like 
+Put into something like:
 /etc/udev/rules.d/50-big-red-button.rules
 
 Reload the rules:
 ~~~
  sudo udevadm control --reload-rules
 ~~~
-Verify it is working by unplug / replug and 
+Verify it is working by unplug / replug: 
 
 ls -l /dev/big_red_button
 
@@ -52,10 +54,9 @@ The project includes `mollyd`, a daemon process that runs in the background. By 
 ### Configuration
 
 The daemon loads configuration with the following priority (from lowest to highest):
-1.  Hard-coded default values.
-2.  Values from `/etc/mollyd.conf`.
-3.  Values from a custom config file specified with `--config`.
-4.  Command-line arguments (e.g., `--device`).
+1.  Values from `/etc/mollyd.conf`.
+2.  Values from a custom config file specified with `--config`.
+3.  Command-line arguments (e.g., `--device`).
 
 **Example `/etc/mollyd.conf`:**
 ```ini
