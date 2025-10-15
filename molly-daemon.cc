@@ -148,9 +148,10 @@ int main(int argc, char* argv[])
       }
       catch (MollyError err)
       {
-        syslog(LOG_ERR, "Error trying to open device: %s", err.what());
-        usleep(config.error_poll_interval_ms * 1000);
-        continue;
+        syslog(LOG_ERR, "Fatal: Error trying to open device: %s. Shutting down.", err.what());
+        // Exit. Let systemd or other supervisor restart the daemon.
+        shutdown = true;
+        continue; // Go to the top of the loop to exit cleanly.
       }
     }
 
